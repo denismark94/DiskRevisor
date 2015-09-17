@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace DiskRevisor
 {
@@ -10,11 +11,15 @@ namespace DiskRevisor
     {
         static void Main(string[] args)
         {
-            DFile a = new DFile(512, "a", "a");
-            DFile b = new DFile(1024, "b", "b");
-            DDirectory dir = new DDirectory();
-            dir.files.Add("a",a);
-            dir.files.Add("b",b);
+            //DFile a = new DFile(512, "a", "a");
+            //DFile b = new DFile(1024, "b", "b");
+            //DDirectory dir = new DDirectory();
+            //dir.files.Add("a", a);
+            //dir.files.Add("b", b);
+            string hash = BitConverter.ToString(computeFileHash("C:\\\\vm\\olympXP2015.vdi"));
+            //string hash = BitConverter.ToString(computeFileHash("C:\\\\vm\\olympXP2015.vbox"));
+            Console.WriteLine(hash);
+            Console.ReadKey();
         }
 
         public static DDirectory createDB(string path)
@@ -34,9 +39,23 @@ namespace DiskRevisor
 
         public static DFile dump(string path)
         {
-            int size = File.
+            FileInfo temp = new FileInfo(path);
+            long size = temp.Length;
+            byte[] hash = computeFileHash(path);
+            string[] name = path.Split('/');
+            DFile result = new DFile(size,path,name[name.Length-1]);
+            return result;
         }
 
+        private static byte[] computeFileHash(string filename)
+        {
+            MD5 md5 = MD5.Create();
+            using (FileStream fs = new FileStream(filename, FileMode.Open))
+            {
+                byte[] hash = md5.ComputeHash(fs);
+                return hash;
+            }
+        }
         static void serialize() 
         {
             DFile test = new DFile(512, "a", "b");
@@ -64,8 +83,7 @@ namespace DiskRevisor
         }
     }
 
-    [Serializable()]
-    public class DDirectory : ISerializable
+    public class DDirectory
     {
         public Dictionary<string, DDirectory> subdirs;
         public Dictionary<string, DFile> files;
@@ -75,16 +93,17 @@ namespace DiskRevisor
             this.files = new Dictionary<string,DFile>();
             this.subdirs = new Dictionary<string,DDirectory>();
         }
+
     }
         
     [Serializable()]
     public class DFile : ISerializable
     {
-        public int size;
+        public long size;
         public string name;
         public string hash;
 
-        public DFile(int size, string name, string hash)
+        public DFile(long size, string name, string hash)
         {
             this.size = size;
             this.name = name;
@@ -93,7 +112,7 @@ namespace DiskRevisor
 
         protected DFile(SerializationInfo info, StreamingContext ctxt)
         {
-            size = info.GetInt32("size");
+            size = info.GetInt64("size");
             name = info.GetString("name");
             hash = info.GetString("hash");
         }

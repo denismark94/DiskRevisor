@@ -2,3 +2,7 @@ C:\Users\admin\Documents\Visual Studio 2010\Projects\DiskRevisor\DiskRevisor\bin
 C:\Users\admin\Documents\Visual Studio 2010\Projects\DiskRevisor\DiskRevisor\bin\Debug\DiskRevisor.pdb
 C:\Users\admin\Documents\Visual Studio 2010\Projects\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.exe
 C:\Users\admin\Documents\Visual Studio 2010\Projects\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.pdb
+C:\Users\admin\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.exe
+C:\Users\admin\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.pdb
+C:\Users\admin\DiskRevisor\DiskRevisor\bin\Debug\DiskRevisor.exe
+C:\Users\admin\DiskRevisor\DiskRevisor\bin\Debug\DiskRevisor.pdb
