@@ -6,3 +6,8 @@ C:\Users\admin\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.exe
 C:\Users\admin\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.pdb
 C:\Users\admin\DiskRevisor\DiskRevisor\bin\Debug\DiskRevisor.exe
 C:\Users\admin\DiskRevisor\DiskRevisor\bin\Debug\DiskRevisor.pdb
+D:\Projects\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.exe
+D:\Projects\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.pdb
+D:\Projects\DiskRevisor\DiskRevisor\obj\x86\Debug\DiskRevisor.csprojResolveAssemblyReference.cache
+D:\Projects\DiskRevisor\DiskRevisor\bin\Debug\DiskRevisor.exe
+D:\Projects\DiskRevisor\DiskRevisor\bin\Debug\DiskRevisor.pdb
