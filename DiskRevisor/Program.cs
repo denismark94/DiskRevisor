@@ -12,14 +12,11 @@ namespace DiskRevisor
     {
         static void Main(string[] args)
         {
-            //serialize();
-
-            
-            //DDirectory dump = createDB("D:\\\\Downloads\\WinSetupFromUSB-1-6-beta2");
+            DDirectory dump = createContext("C:\\\\Users\\admin\\Desktop", 0);
             //serialize(dump);
             //Console.WriteLine("Serialization successfull");
-            DDirectory dump = (DDirectory)deserialize();
-            Console.WriteLine("Deserialization successfull");
+            //DDirectory dump = (DDirectory)deserialize();
+            //Console.WriteLine("Deserialization successfull");
             print(dump);
             Console.Write("Press any key to quit");
             Console.ReadKey();
@@ -31,11 +28,28 @@ namespace DiskRevisor
             List<DDirectory> subdirs = dir.subdirs;
             for (int i = 0; i < files.Count; i++)
                 Console.WriteLine(files[i].name);
-                for (int i = 0; i < subdirs.Count; i++)
-                {
-                    print(subdirs[i]);
-                    Console.WriteLine(subdirs[i].name);
-                }
+            for (int i = 0; i < subdirs.Count; i++)
+            {
+                print(subdirs[i]);
+                Console.WriteLine("Name: {0} Dumped:{1}",subdirs[i].name,subdirs[i].isDumped);
+            }
+        }
+
+        public static DDirectory createContext(string path, int iteration)
+        {
+            string[] folders = path.Split('\\');
+            string sub = "";
+            DDirectory dir;
+            if (iteration < folders.Length - 1)
+            {
+                for (int i = 0; i < iteration; i++)
+                    sub += folders[i] + '\\';
+                dir = new DDirectory(sub, false);
+                dir.subdirs.Add(createContext(path, ++iteration));
+            }
+            else
+                dir = createDB(path);
+            return dir;
         }
 
         public static DDirectory createDB(string path)
@@ -48,7 +62,7 @@ namespace DiskRevisor
                 dsd.Add(createDB(subdirs[i]));
             for (int i = 0; i < files.Length; i++)
                 df.Add(dump(files[i]));
-            return new DDirectory(path, df,dsd, true);
+            return new DDirectory(path, df, dsd, true);
         }
 
         public static DFile dump(string path)
@@ -72,12 +86,12 @@ namespace DiskRevisor
         }
 
 
-        static void serialize(Object obj) 
-        {             
+        static void serialize(Object obj)
+        {
             IFormatter formatter = new BinaryFormatter();
-            Stream stream = new FileStream("test.bin", 
+            Stream stream = new FileStream("test.bin",
                 FileMode.Create,
-                FileAccess.Write, 
+                FileAccess.Write,
                 FileShare.None);
             formatter.Serialize(stream, obj);
             stream.Close();
@@ -97,89 +111,89 @@ namespace DiskRevisor
     }
 
     [Serializable()]
-        public class DDirectory : ISerializable
+    public class DDirectory : ISerializable
+    {
+        public string name;
+        public List<DDirectory> subdirs = new List<DDirectory>();
+        public List<DFile> files = new List<DFile>();
+        bool isChecked;
+        public bool isDumped = false;
+
+        public DDirectory(string name, bool isDumped)
         {
-            public string name;
-            public List<DDirectory> subdirs = new List<DDirectory>();
-            public List<DFile> files = new List<DFile>();
-            bool isChecked;
-            bool isDumped = false;
-
-            public DDirectory(string name, bool isDumped)
-            {
-                this.name = name;
-                this.isDumped = isDumped;
-            }
-
-            public DDirectory(string name, List<DFile> files, List<DDirectory> subdirs, bool isDumped)
-            {
-                this.name = name;
-                this.files = files;
-                this.subdirs = subdirs;
-                this.isDumped = isDumped;
-            }
-
-            public DDirectory(SerializationInfo info, StreamingContext ctxt)
-            {
-                name = info.GetString("name");
-                files = (List<DFile>)info.GetValue("files", files.GetType());
-                subdirs = (List<DDirectory>)info.GetValue("subdirs", subdirs.GetType());
-                isDumped = info.GetBoolean("isDumped");
-            }
-
-            public void GetObjectData(SerializationInfo info, StreamingContext ctxt)
-            {
-                info.AddValue("name", name);
-                info.AddValue("files", files);
-                info.AddValue("subdirs", subdirs);
-                info.AddValue("isDumped", isDumped);
-            }
+            this.name = name;
+            this.isDumped = isDumped;
         }
 
-   
-        [Serializable()]
-        public class DFile : ISerializable
+        public DDirectory(string name, List<DFile> files, List<DDirectory> subdirs, bool isDumped)
         {
-            public long size;
-            public string name;
-            public string hash;
-            public bool isDumped = false;
-            public bool isChecked = false;
-
-            public DFile(long size, string name, string hash, bool isDumped)
-            {
-                this.size = size;
-                this.name = name;
-                this.hash = hash;
-                this.isDumped = isDumped;
-            }
-
-            protected DFile(SerializationInfo info, StreamingContext ctxt)
-            {
-                size = info.GetInt64("size");
-                name = info.GetString("name");
-                hash = info.GetString("hash");
-                isDumped =  info.GetBoolean("isDumped");
-            }
-
-            public void GetObjectData(SerializationInfo info, StreamingContext ctxt)
-            {
-                info.AddValue("size", size);
-                info.AddValue("name", name);
-                info.AddValue("hash", hash);
-                info.AddValue("isDumped", isDumped);
-            }
+            this.name = name;
+            this.files = files;
+            this.subdirs = subdirs;
+            this.isDumped = isDumped;
         }
 
-        [DataContract]
-        public class FileMap
+        public DDirectory(SerializationInfo info, StreamingContext ctxt)
         {
-            // need a parameterless constructor for serialization
-            public FileMap()
-            {
-                files = new Dictionary<string, DFile>();
-            }
-            [DataMember]
-            public Dictionary<string, DFile> files { get; set; }
+            name = info.GetString("name");
+            files = (List<DFile>)info.GetValue("files", files.GetType());
+            subdirs = (List<DDirectory>)info.GetValue("subdirs", subdirs.GetType());
+            isDumped = info.GetBoolean("isDumped");
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext ctxt)
+        {
+            info.AddValue("name", name);
+            info.AddValue("files", files);
+            info.AddValue("subdirs", subdirs);
+            info.AddValue("isDumped", isDumped);
         }
     }
+
+
+    [Serializable()]
+    public class DFile : ISerializable
+    {
+        public long size;
+        public string name;
+        public string hash;
+        public bool isDumped = false;
+        public bool isChecked = false;
+
+        public DFile(long size, string name, string hash, bool isDumped)
+        {
+            this.size = size;
+            this.name = name;
+            this.hash = hash;
+            this.isDumped = isDumped;
+        }
+
+        protected DFile(SerializationInfo info, StreamingContext ctxt)
+        {
+            size = info.GetInt64("size");
+            name = info.GetString("name");
+            hash = info.GetString("hash");
+            isDumped = info.GetBoolean("isDumped");
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext ctxt)
+        {
+            info.AddValue("size", size);
+            info.AddValue("name", name);
+            info.AddValue("hash", hash);
+            info.AddValue("isDumped", isDumped);
+        }
+    }
+
+    [DataContract]
+    public class FileMap
+    {
+        // need a parameterless constructor for serialization
+        public FileMap()
+        {
+            files = new Dictionary<string, DFile>();
+        }
+        [DataMember]
+        public Dictionary<string, DFile> files { get; set; }
+    }
+}
