@@ -12,14 +12,26 @@ namespace DiskRevisor
     {
         static void Main(string[] args)
         {
-            DDirectory dump = createContext("C:\\\\Users\\admin\\Desktop", 0);
+            //DDirectory dump = createContext("C:\\Users\\admin", 0);
             //serialize(dump);
             //Console.WriteLine("Serialization successfull");
-            //DDirectory dump = (DDirectory)deserialize();
-            //Console.WriteLine("Deserialization successfull");
+            DDirectory dump = (DDirectory)deserialize();
+            Console.WriteLine("Deserialization successfull");
             print(dump);
             Console.Write("Press any key to quit");
             Console.ReadKey();
+        }
+
+        static void check(string path) 
+        {
+            DDirectory dump = (DDirectory)deserialize();
+            string[] splpath = path.Split('\\');
+
+        }
+
+        static DDirectory checkAvailabilty(string path, int iteration)
+        {
+            string[] splpath = path.Split('\\');
         }
 
         public static void print(DDirectory dir)
@@ -27,7 +39,7 @@ namespace DiskRevisor
             List<DFile> files = dir.files;
             List<DDirectory> subdirs = dir.subdirs;
             for (int i = 0; i < files.Count; i++)
-                Console.WriteLine(files[i].name);
+                    Console.WriteLine(files[i].name);
             for (int i = 0; i < subdirs.Count; i++)
             {
                 print(subdirs[i]);
@@ -40,7 +52,7 @@ namespace DiskRevisor
             string[] folders = path.Split('\\');
             string sub = "";
             DDirectory dir;
-            if (iteration < folders.Length - 1)
+            if (iteration < folders.Length)
             {
                 for (int i = 0; i < iteration; i++)
                     sub += folders[i] + '\\';
@@ -54,8 +66,17 @@ namespace DiskRevisor
 
         public static DDirectory createDB(string path)
         {
-            string[] subdirs = Directory.GetDirectories(path);
-            string[] files = Directory.GetFiles(path);
+            string[] subdirs, files;
+            try
+            {
+                subdirs = Directory.GetDirectories(path);
+                files = Directory.GetFiles(path);
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                Console.WriteLine("Доступ запрещен к папке {0}",path);
+                return new DDirectory(path,false);
+            }
             List<DDirectory> dsd = new List<DDirectory>();
             List<DFile> df = new List<DFile>();
             for (int i = 0; i < subdirs.Length; i++)
@@ -70,23 +91,42 @@ namespace DiskRevisor
             FileInfo temp = new FileInfo(path);
             long size = temp.Length;
             byte[] hashBytes = computeFileHash(path);
-            string hash = BitConverter.ToString(computeFileHash(path));
+            if (hashBytes == null)
+            {
+                
+                return new DFile(size,path,null,false);
+            }
+            string hash = BitConverter.ToString(hashBytes);
             DFile result = new DFile(size, path, hash, true);
             return result;
         }
 
         private static byte[] computeFileHash(string filename)
         {
-            MD5 md5 = MD5.Create();
-            using (FileStream fs = new FileStream(filename, FileMode.Open))
+            FileStream fs;
+            try
             {
-                byte[] hash = md5.ComputeHash(fs);
-                return hash;
+                fs = new FileStream(filename, FileMode.Open);
             }
+            catch (IOException e)
+            {
+                Console.WriteLine("Для файла \n\r{0}\n\r не может быть посчитана хеш-сумма: "+ 
+                "Файл используется другим приложением", filename);
+                return null;
+            }
+            catch (UnauthorizedAccessException uae)
+            {
+                Console.WriteLine("Для файла \n\r{0}\n\r не может быть посчитана хеш-сумма: " +
+                    "Отказано в доступе", filename);
+                return null;
+            }
+            MD5 md5 = MD5.Create();
+            byte[] hash = md5.ComputeHash(fs);
+            fs.Flush();
+            return hash;
         }
 
-
-        static void serialize(Object obj)
+        public static void serialize(Object obj)
         {
             IFormatter formatter = new BinaryFormatter();
             Stream stream = new FileStream("test.bin",
@@ -97,7 +137,7 @@ namespace DiskRevisor
             stream.Close();
         }
 
-        static Object deserialize()
+        public static Object deserialize()
         {
             IFormatter formatter = new BinaryFormatter();
             Stream stream = new FileStream("test.bin",
@@ -150,7 +190,6 @@ namespace DiskRevisor
         }
     }
 
-
     [Serializable()]
     public class DFile : ISerializable
     {
@@ -183,17 +222,5 @@ namespace DiskRevisor
             info.AddValue("hash", hash);
             info.AddValue("isDumped", isDumped);
         }
-    }
-
-    [DataContract]
-    public class FileMap
-    {
-        // need a parameterless constructor for serialization
-        public FileMap()
-        {
-            files = new Dictionary<string, DFile>();
-        }
-        [DataMember]
-        public Dictionary<string, DFile> files { get; set; }
     }
 }
