@@ -11,46 +11,43 @@ namespace DiskRevisor
     class Program
     {
         public static bool changed = false;
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Введите \"dump\" для сбора дампа или \"check\" для проверки папки");
-            string type = Console.ReadLine();
-            Console.WriteLine("Введите путь до целевой папки");
-            string path = Console.ReadLine();
-            DDirectory dump;
-            switch (type.ToCharArray()[0]) { 
-                case 'd':
+            if (args.Length < 2)
+                Console.WriteLine("DiskRevisor v 0.1\nИспользование\ndiskrevisor.exe -t:<dump|check> -p:<Путь>");
+            else
+            {
+                string operation = args[0].Replace("-t:", "").ToLower();
+                string path = args[1].Replace("-p:", "");
+                DDirectory dump;
+                if (operation.Equals("dump"))
+                {
                     File.Delete("test.bin");
                     Console.WriteLine("Сбор дампа...");
                     dump = createContext(path, 0);
                     Console.WriteLine("Дамп успешно собран, сериализация...");
                     serialize(dump);
                     Console.WriteLine("Сериализация успешна");
-                    break;
-                case 'c':
+                }
+                else if (operation.Equals("check"))
+                {
                     Console.WriteLine("Десериализация...");
                     dump = (DDirectory)deserialize();
                     Console.WriteLine("Дамп успешно восстановлен");
-                    Console.WriteLine("Проверка...");
-                    check(path,dump);
+                    check(path, dump);
                     if (changed)
-                        Console.WriteLine("Проверка завершена. В ходе проверки выявлены изменения контролируемой директории");
+                        Console.WriteLine("Проверка завершена. В ходе проверки выявлены изменения");
                     else
-                        Console.WriteLine("Проверка завершена. Контролируемая директория не изменилась");
-                    break;
+                        Console.WriteLine("Проверка завершена. В ходе проверки изменения не выявлены");
+                }
+                else
+                    Console.WriteLine("Неверно задан тип операции");
             }
-            //DDirectory dump = createContext("C:\\Users\\Denis\\Downloads", 0);
-            //print(dump);
-            //serialize(dump);
-        //    Console.WriteLine("Serialization successfull");
-            //DDirectory dump = (DDirectory)deserialize();
-            //Console.WriteLine("Deserialization successfull");
-            //String test = "C:\\Users\\Denis\\Downloads";
-            //check(test, dump);
-            //Console.WriteLine("Проверка завершена");
+
         }
 
-        static bool check(string path, DDirectory dir) 
+        static bool check(string path, DDirectory dir)
         {
             string[] splpath = path.Split('\\');
             string tmppth = "";
@@ -58,10 +55,7 @@ namespace DiskRevisor
             {
                 tmppth = splpath[0];
                 for (int j = 1; j <= i; j++)
-                    tmppth += '\\'+splpath[j];
-                if (!dir.isDumped)
-                    Console.WriteLine("Внимание! Не полностью проверена папка\n{0}\n"+
-                        "Некоторые объекты могли быть проигнорированы при сборе дампа\n",dir.name);
+                    tmppth += '\\' + splpath[j];
                 dir = checkAvailabilty(tmppth, dir);
                 if (dir == null)
                 {
@@ -69,16 +63,18 @@ namespace DiskRevisor
                     return false;
                 }
             }
-            Console.WriteLine("Проверка целевой папки...");
+            Console.WriteLine("Проверка...");
             compare(dir, path);
-            
+
             return true;
 
         }
 
-        public static void compare(DDirectory dump, string path) {
+        public static void compare(DDirectory dump, string path)
+        {
             string[] subdirs;
             string[] files;
+
             try
             {
                 subdirs = Directory.GetDirectories(path);
@@ -89,25 +85,29 @@ namespace DiskRevisor
                 Console.WriteLine("Доступ запрещен к папке {0}", path);
                 return;
             }
+            if (!dump.isDumped)
+                Console.WriteLine("Внимание! Не полностью проверена папка\n{0}\n" +
+                    "Некоторые объекты могли быть проигнорированы при сборе дампа\n", dump.name);
             FileInfo fi;
             bool match;
-            string hash;
             for (int i = 0; i < files.Length; i++)
             {
                 match = false;
                 for (int j = 0; j < dump.files.Count; j++)
                     if (files[i].Equals(dump.files[j].name))
                     {
+
                         fi = new FileInfo(files[i]);
-                        if (fi.Length != dump.files[j].size) 
+                        if (fi.Length != dump.files[j].size)
                         {
                             Console.WriteLine("Размер следующего файла был изменен:\n{0}\n", files[i]);
                             changed = true;
                         }
-                        byte[]hashBytes = computeFileHash(files[i]);
+                        byte[] hashBytes = computeFileHash(files[i]);
                         if (hashBytes == null)
                         {
                             match = true;
+                            dump.files[j].isChecked = true;
                             break;
                         }
                         if (!BitConverter.ToString(hashBytes).Equals(dump.files[j].hash))
@@ -119,27 +119,28 @@ namespace DiskRevisor
                         match = true;
                         break;
                     }
-                if (!match) 
+                if (!match)
                 {
-                    Console.WriteLine("Следующий файл был добавлен:\n{0}\n", files[i]);
+                    if (dump.isDumped)
+                        Console.WriteLine("Следующий файл был добавлен:\n{0}\n", files[i]);
                     changed = true;
                 }
             }
 
             for (int i = 0; i < dump.files.Count; i++)
-                if (!dump.files[i].isChecked) 
+                if (!dump.files[i].isChecked)
                 {
                     changed = true;
-                    Console.WriteLine("Следующий файл был удален:\n{0}\n",dump.files[i].name);
+                    Console.WriteLine("Следующий файл был удален:\n{0}\n", dump.files[i].name);
                 }
-                        
+
             for (int i = 0; i < subdirs.Length; i++)
             {
                 match = false;
                 for (int j = 0; j < dump.subdirs.Count; j++)
                     if (subdirs[i].Equals(dump.subdirs[j].name))
                     {
-                        compare(dump.subdirs[j],subdirs[i]);
+                        compare(dump.subdirs[j], subdirs[i]);
                         dump.subdirs[j].isChecked = true;
                         match = true;
                         break;
@@ -147,12 +148,15 @@ namespace DiskRevisor
                 if (!match)
                 {
                     changed = true;
-                    Console.WriteLine("Следующая папка была добавлена:\n{0}\n",subdirs[i]);
+                    if (dump.isDumped)
+                        Console.WriteLine("Следующая папка была добавлена:\n{0}\n", subdirs[i]);
+                    else
+                        Console.WriteLine("Следующая папка была добавлена либо не была внесена в дамп:\n{0}\n", subdirs[i]);
                 }
             }
 
             for (int i = 0; i < dump.subdirs.Count; i++)
-                if (!dump.subdirs[i].isChecked) 
+                if (!dump.subdirs[i].isChecked)
                 {
                     changed = true;
                     Console.WriteLine("Следующая папка была удалена:\n{0}\n", dump.subdirs[i].name);
@@ -173,7 +177,7 @@ namespace DiskRevisor
             List<DFile> files = dir.files;
             List<DDirectory> subdirs = dir.subdirs;
             for (int i = 0; i < files.Count; i++)
-                    Console.WriteLine("FileName: {0} Dumped: {1}",files[i].name,files[i].isDumped);
+                Console.WriteLine("FileName: {0} Dumped: {1}", files[i].name, files[i].isDumped);
             for (int i = 0; i < subdirs.Count; i++)
                 print(subdirs[i]);
         }
@@ -183,7 +187,7 @@ namespace DiskRevisor
             string[] folders = path.Split('\\');
             string sub = "";
             DDirectory dir;
-            if (iteration < folders.Length-1)
+            if (iteration < folders.Length - 1)
             {
                 for (int i = 0; i < iteration; i++)
                     sub += folders[i] + '\\';
@@ -192,29 +196,33 @@ namespace DiskRevisor
                 dir.subdirs.Add(createContext(path, ++iteration));
             }
             else
+            {
                 dir = createDB(path);
+                dir.isDumped = true;
+            }
             return dir;
         }
 
         public static DDirectory createDB(string path)
         {
-            string[] subdirs, files;
+            IEnumerable<string> subdirs, files;
             try
             {
-                subdirs = Directory.GetDirectories(path);
-                files = Directory.GetFiles(path);
+                subdirs = Directory.EnumerateDirectories(path);
+                files = Directory.EnumerateFiles(path);
+
             }
             catch (UnauthorizedAccessException e)
             {
-                Console.WriteLine("Доступ запрещен к папке {0}",path);
-                return new DDirectory(path,false);
+                Console.WriteLine(e.Message);
+                return new DDirectory(path, false);
             }
             List<DDirectory> dsd = new List<DDirectory>();
             List<DFile> df = new List<DFile>();
-            for (int i = 0; i < subdirs.Length; i++)
-                dsd.Add(createDB(subdirs[i]));
-            for (int i = 0; i < files.Length; i++)
-                df.Add(dump(files[i]));
+            foreach (string subdir in subdirs)
+                dsd.Add(createDB(subdir));
+            foreach (string file in files)
+                df.Add(dump(file));
             return new DDirectory(path, df, dsd, true);
         }
 
@@ -224,7 +232,7 @@ namespace DiskRevisor
             long size = temp.Length;
             byte[] hashBytes = computeFileHash(path);
             if (hashBytes == null)
-                return new DFile(size,path,null,false);
+                return new DFile(size, path, null, false);
             string hash = BitConverter.ToString(hashBytes);
             DFile result = new DFile(size, path, hash, true);
             return result;
@@ -235,12 +243,13 @@ namespace DiskRevisor
             FileStream fs;
             try
             {
-                fs = new FileStream(filename, FileMode.Open);
+                fs = new FileStream(filename, FileMode.Open, System.Security.AccessControl.FileSystemRights.ReadData, FileShare.Read, 4096, FileOptions.None);
             }
-            catch (IOException)
+            catch (IOException io)
             {
-                Console.WriteLine("Для файла \n{0}\nНе может быть посчитана хеш-сумма: "+ 
-                "Файл используется другим приложением\n", filename);
+                Console.WriteLine(io.Message);
+                //Console.WriteLine("Для файла \n{0}\nНе может быть посчитана хеш-сумма: " +
+                //"Файл используется другим приложением\n", filename);
                 return null;
             }
             catch (UnauthorizedAccessException)
